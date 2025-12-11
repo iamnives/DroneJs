@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Control Simulator</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loader">
+        <div id="load-content">
+            <div class="drone-icon">
+                <svg width="80" height="80" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="8" fill="#e74c3c"/>
+                    <circle cx="25" cy="25" r="6" fill="#3498db" class="propeller prop1"/>
+                    <circle cx="75" cy="25" r="6" fill="#e67e22" class="propeller prop2"/>
+                    <circle cx="25" cy="75" r="6" fill="#3498db" class="propeller prop3"/>
+                    <circle cx="75" cy="75" r="6" fill="#e67e22" class="propeller prop4"/>
+                    <line x1="50" y1="50" x2="25" y2="25" stroke="#7f8c8d" stroke-width="2"/>
+                    <line x1="50" y1="50" x2="75" y2="25" stroke="#7f8c8d" stroke-width="2"/>
+                    <line x1="50" y1="50" x2="25" y2="75" stroke="#7f8c8d" stroke-width="2"/>
+                    <line x1="50" y1="50" x2="75" y2="75" stroke="#7f8c8d" stroke-width="2"/>
+                </svg>
+            </div>
+            <h2>Jotron Drone Simulator</h2>
+            <div id="load-progress">
+                <div id="progress-bar"></div>
+            </div>
+            <p id="progress-text">Initializing...</p>
+        </div>
+    </div>
+    
+    <div id="container">
+        <!-- Map Container -->
+        <div id="map"></div>
+        
+        <!-- Bottom Camera View -->
+        <canvas id="bottom-camera" style="display: none;"></canvas>
+        
+        <!-- 3D View Container -->
+        <div id="three-container"></div>
+        
+        <!-- HUD Overlay -->
+        <div id="hud">
+            <div class="hud-panel top-left">
+                <h3>Drone Control</h3>
+                <div class="telemetry">
+                    <div class="telem-item">
+                        <span class="label">Altitude:</span>
+                        <span id="altitude" class="value">0.0 m</span>
+                    </div>
+                    <div class="telem-item">
+                        <span class="label">Speed:</span>
+                        <span id="speed" class="value">0.0 m/s</span>
+                    </div>
+                    <div class="telem-item">
+                        <span class="label">Battery:</span>
+                        <span id="battery" class="value">100%</span>
+                    </div>
+                    <div class="telem-item">
+                        <span class="label">Position:</span>
+                        <span id="position" class="value">0.0, 0.0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hud-panel top-right">
+                <h3>Controls</h3>
+                <div class="controls-info">
+                    <p><strong>W/S:</strong> Forward/Backward</p>
+                    <p><strong>A/D:</strong> Left/Right</p>
+                    <p><strong>Q/E:</strong> Rotate Left/Right</p>
+                    <p><strong>Space:</strong> Ascend</p>
+                    <p><strong>Shift:</strong> Descend</p>
+                    <p><strong>R:</strong> Reset Position</p>
+                    <p><strong>V:</strong> Toggle View</p>
+                    <p><strong>M:</strong> Resize Map</p>
+                    <p><strong>C:</strong> Center Map on Drone</p>
+                    <p><strong>B:</strong> Toggle Bottom Camera</p>
+                    <p><strong>Click Map:</strong> Teleport</p>
+                </div>
+            </div>
+            
+            <div class="hud-panel bottom-center">
+                <div class="attitude-indicator">
+                    <div class="horizon-background">
+                        <div class="sky-half"></div>
+                        <div class="ground-half"></div>
+                    </div>
+                    <div id="horizon-rotation">
+                        <div id="horizon-line"></div>
+                        <div class="pitch-lines">
+                            <div class="pitch-line" style="top: calc(50% - 60px)"><span>20°</span></div>
+                            <div class="pitch-line" style="top: calc(50% - 40px)"><span>10°</span></div>
+                            <div class="pitch-line center" style="top: 50%"><span>0°</span></div>
+                            <div class="pitch-line" style="top: calc(50% + 40px)"><span>-10°</span></div>
+                            <div class="pitch-line" style="top: calc(50% + 60px)"><span>-20°</span></div>
+                        </div>
+                    </div>
+                    <div class="aircraft-symbol">
+                        <div class="wing-left"></div>
+                        <div class="wing-right"></div>
+                        <div class="center-dot"></div>
+                    </div>
+                    <div class="roll-indicator">
+                        <div class="roll-marks">
+                            <div class="roll-mark" style="transform: rotate(-60deg)"></div>
+                            <div class="roll-mark" style="transform: rotate(-45deg)"></div>
+                            <div class="roll-mark major" style="transform: rotate(-30deg)"></div>
+                            <div class="roll-mark" style="transform: rotate(-20deg)"></div>
+                            <div class="roll-mark" style="transform: rotate(-10deg)"></div>
+                            <div class="roll-mark major" style="transform: rotate(0deg)"></div>
+                            <div class="roll-mark" style="transform: rotate(10deg)"></div>
+                            <div class="roll-mark" style="transform: rotate(20deg)"></div>
+                            <div class="roll-mark major" style="transform: rotate(30deg)"></div>
+                            <div class="roll-mark" style="transform: rotate(45deg)"></div>
+                            <div class="roll-mark" style="transform: rotate(60deg)"></div>
+                        </div>
+                        <div class="roll-pointer"></div>
+                    </div>
+                </div>
+                <div class="compass">
+                    <div class="heading-tape">
+                        <span>N</span><span>30</span><span>60</span><span>E</span><span>120</span><span>150</span>
+                        <span>S</span><span>210</span><span>240</span><span>W</span><span>300</span><span>330</span>
+                        <span>N</span>
+                    </div>
+                    <div class="heading-marker"></div>
+                    <div id="heading" class="heading-value">0°</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/examples/jsm/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+            "three-loader-3dtiles": "https://unpkg.com/three-loader-3dtiles@1.2.7/dist/lib/three-loader-3dtiles.js"
+        }
+    }
+    </script>
+    <script src="js/data/landmarks.js"></script>
+    <script src="app.js" type="module"></script>
+</body>
+</html>
